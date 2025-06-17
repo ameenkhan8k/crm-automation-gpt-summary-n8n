@@ -1,0 +1,186 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "be417657-470f-4619-9942-d5e238ac8748",
+      "name": "🕒 Start Workflow"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1cl3JzQV-jyvGWSxu6auj84ZsU9ONc8JWSSWfSOWesvg",
+          "mode": "list",
+          "cachedResultName": "Weekly CRM Report",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cl3JzQV-jyvGWSxu6auj84ZsU9ONc8JWSSWfSOWesvg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1cl3JzQV-jyvGWSxu6auj84ZsU9ONc8JWSSWfSOWesvg/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        220,
+        0
+      ],
+      "id": "b2aaedb0-2526-46db-8424-86e3d6c49daa",
+      "name": "\t📄 Fetch CRM Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "q6RN4nDdT8okQ4zp",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all rows into a summary-ready string\nconst rows = items.map((item, index) => {\n  const data = item.json;\n  return `Client: ${data[\"Client Name\"]}, Deal Stage: ${data[\"Deal Stage\"]}, Owner: ${data[\"Owner Name\"]}, Task Status: ${data[\"Task Status\"]}, Value: ${data[\"Value ($)\"]}`;\n});\n\nreturn [{\n  json: {\n    formattedData: rows.join('\\n')\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        0
+      ],
+      "id": "d7648293-5927-4a32-95b5-5160c1eb0d44",
+      "name": "🧠 Format Data for GPT"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a reporting assistant. You analyze CRM data to help teams get quick weekly summaries.",
+              "role": "system"
+            },
+            {
+              "content": "=Here is the CRM data:\n\n{{ $json.formattedData }}\n\nWrite a 3-sentence summary for this week's report. Highlight:\n- Total deals closed\n- Which owners performed well\n- Any insights (e.g., pending tasks, new leads, demo scheduled)\n"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        600,
+        0
+      ],
+      "id": "ed7eb6d6-42c0-48ce-8756-1ecddbc1612a",
+      "name": "📝 Generate Summary (GPT)",
+      "credentials": {
+        "openAiApi": {
+          "id": "8Qgr4HsgaOmVQGda",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot7930809776:AAHEI9chcEeZ-YiBBZ50RAhCAjQaM9O3UuI/sendMessage",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "6361701767"
+            },
+            {
+              "name": "text",
+              "value": "=📊 *Weekly CRM Summary*  ✅ Deals Closed: {{ $json.message.content.summary.total_deals_closed }} 👑 Top Performers: {{ $json.message.content.summary.top_performers.join(', ') }} 📌 Insights: {{ $json.message.content.summary.insights }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "673370f7-151c-4fd2-916b-d7349b688a2a",
+      "name": "📬 Send Summary to Telegram"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🕒 Start Workflow": {
+      "main": [
+        [
+          {
+            "node": "\t📄 Fetch CRM Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\t📄 Fetch CRM Data": {
+      "main": [
+        [
+          {
+            "node": "🧠 Format Data for GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Format Data for GPT": {
+      "main": [
+        [
+          {
+            "node": "📝 Generate Summary (GPT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Generate Summary (GPT)": {
+      "main": [
+        [
+          {
+            "node": "📬 Send Summary to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a3708485-3248-446f-ad3a-fbc9d3f38472",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3f693036e5e564ac40aa6fea433969811255d9f9960f176603392ecdfb2da482"
+  },
+  "id": "0pAP2RxpXutkCm5s",
+  "tags": []
+}
